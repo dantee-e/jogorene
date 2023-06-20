@@ -1,6 +1,7 @@
 server:
-		javac Servidor.java
-		sudo java Servidor
+		javac -d ./classes Servidor.java
+		java -classpath ./classes Servidor
+
 cliente:
-		javac Cliente.java
-		java Cliente
+		javac -classpath ./classes Cliente.java -d ./classes
+		java -classpath ./classes Cliente
