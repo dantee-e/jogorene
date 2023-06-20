@@ -2,7 +2,17 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
-class Carro{
+class Clock {
+    static long start = System.nanoTime();
+    public static long getTime(){
+        return System.nanoTime();
+    }
+    public static long getExecTime(){
+        return System.nanoTime()-start;
+    }
+ }
+
+class Carro implements Serializable{
     public int x;
     public int y;
     public double Vx;
@@ -13,47 +23,68 @@ class Carro{
         y = Y;
         angulo = ANG;
     }
-    void updateV(int vel){
-        Vx = vel*Math.cos(angulo);
-        Vy = vel/Math.sin(angulo);
-    }
-}
-class MyServer{  
-    public static void main(String args[])throws Exception{  
-        ServerSocket ss=new ServerSocket(80);
-        Carro carro[] = new Carro[2];
-        carro[0] = new Carro(30, 30, 0);
-        carro[1] = new Carro(30, 30, 0);
-        Socket s[] = new Socket[2];
-        for(int i=0;i<2;i++){
-            s[i]=ss.accept(); 
-        }
-        System.out.println("Os dois carros estao prontos");
-        DataInputStream din[];
-        din[0]=new DataInputStream(s[0].getInputStream());
-        din[1]=new DataInputStream(s[1].getInputStream()); 
-        DataOutputStream dout[];
-        dout[0]=new DataOutputStream(s[0].getOutputStream());
-        dout[1]=new DataOutputStream(s[1].getOutputStream()); 
-        BufferedReader br=new BufferedReader(new InputStreamReader(System.in));
-        
-        String str="",str2="";  
-        while(!str.equals("stop")){  
-            str=din[0].readUTF();
-            System.out.println("client says: "+str);  
-            str2=br.readLine();  
-            dout.writeUTF(str2);  
-            dout.flush();  
-        }  
-        din.close();  
-        s[0].close();
-        s[1].close();  
-        ss.close();  
+    public void updateCarro(int X, int Y, float ANG){
+        x = X;
+        y = Y;
+        angulo = ANG;
     }
 }
 
-class input1 implements Runnable{
-    public void run(){
+class ServerClient extends Thread{
+    ServerSocket ss;
+    Carro carro;
+    public ServerClient(ServerSocket SS){
+        ss = SS;
+    }
+
+    public void updateCarro(int newX, int newY, int angulo){
+        carro.updateCarro(newX, newY, angulo);
+    }
+
+    public void sendCarro(ObjectOutputStream dout){
+        try{
+            dout.writeObject(carro);
+            dout.flush();
+        } catch(Exception e){System.out.println(e);}
         
+    }
+
+    public void run() {
+        carro = new Carro(30, 30, 0);
+        Socket s;
+        try {
+            s = ss.accept();
+    
+            System.out.println("Carro pronto");
+            ObjectOutputStream dout = new ObjectOutputStream(s.getOutputStream());
+            System.out.println("check");
+            //ObjectInputStream din = new ObjectInputStream(s.getInputStream());
+            System.out.println("check");
+            dout.writeObject(carro);
+            
+            dout.flush();
+            
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+}
+
+class Servidor {
+    public static void main(String args[]) {
+        ServerSocket ss;
+        new Clock();
+
+        try {
+            ss = new ServerSocket(80);
+            ServerClient car1 = new ServerClient(ss);
+            car1.start();
+            ServerClient car2 = new ServerClient(ss);
+            car2.start();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
