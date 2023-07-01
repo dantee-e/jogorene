@@ -37,8 +37,15 @@ class ServerSend extends Thread{
     }
     public void run(){
         while(true){
-            carro1.sendCarro();
-            carro2.sendCarro();
+            try{
+                carro1.carro.x+=1;
+                carro2.carro.x+=1;
+                carro1.sendCarro();
+                carro2.sendCarro();
+            } catch(Exception e){
+                e.printStackTrace();
+                break;
+            }
         }
     }
 }
@@ -59,47 +66,47 @@ class ServerClient extends Thread{
             dout = new ObjectOutputStream(s.getOutputStream());
             din = new DataInputStream(s.getInputStream());
         }catch(Exception e){e.printStackTrace();}
-        
     }
-    public Carro getCarro(){
-        return carro;
-    }
+    
     public void updateCarro(int newX, int newY, int angulo){
         carro.updateCarro(newX, newY, angulo);
     }
-    public void sendCarro(){
-        try{
-            dout.writeObject(carro);
-            System.out.println(carro.x);
-            dout.flush();
-        } catch(IOException e){System.out.println(e);}
-        
+    public void sendCarro() throws Exception{
+        try {
+            if (s.isConnected()) {
+                dout.writeObject(carro);
+                dout.flush();
+            } else {
+                s.close();
+            }
+        } catch (Exception e) {
+            throw e;
+        }
     }
     public void run() {
         try {
-            
-    
             System.out.println("Carro pronto");
-            
-            char input;
-            int i=0;
+
             while (true) {
-                input = (char) din.read();
-                if((int)input==65535) break;
-                /*if(i%2==1)
+                try {
+                    char input = (char) din.read();
+                    if ((int) input == 65535) break;
+                    System.out.print(carN);
                     System.out.println(input);
-                else {System.out.print(carN);System.out.print(input);}
-                i++;*/
-                System.out.print(carN);
-                System.out.println(input);
+                } catch (EOFException e) {
+                    // Lidar com a exceção EOFException (fim do fluxo)
+                    System.out.println("Fim do fluxo de entrada. Encerrando a execução.");
+                    break;
+                }
             }
+
             System.out.println("conexao encerrada");
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
     }
+
 }
 
 class Servidor {
@@ -114,7 +121,7 @@ class Servidor {
             ServerClient car2 = new ServerClient(ss, 2);
             car2.start();
             new ServerSend(car1, car2).start();
-            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            //BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         } catch (Exception e) {
             e.printStackTrace();
         }

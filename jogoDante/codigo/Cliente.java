@@ -15,20 +15,27 @@ class Constants {
     public static final int carHeight = 100;
 }
 
-class ClienteReceive{
+class ClienteReceive extends Thread{
     Conexao c;
     ClienteReceive(Conexao c){
         this.c = c;
     }
     public void run(){
         while(true){
-            c.getCar();
+            try{
+                c.getCar();
+            }catch(Exception e){
+                System.out.println("Erro no client receive");
+                e.printStackTrace();
+                break;
+            }
+            
         }
     }
     
 }
 
-class Conexao extends Thread{
+class Conexao{
     Socket socket;
     DataInputStream in;
     ObjectInputStream objectIn;
@@ -40,8 +47,6 @@ class Conexao extends Thread{
         carro[0] = carro1;
         carro[1] = carro2;
         jb = j;
-    }
-    public void run() {
         try {
             
             socket = new Socket("localhost", 8080);
@@ -54,24 +59,17 @@ class Conexao extends Thread{
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
-    public void getCar(){
+    public void getCar() throws Exception{
         try {
-            if (socket.isConnected()) {
-                carro[0] = (Carro) objectIn.readObject();
-                System.out.println("Carro recebido");
-                carro[1] = (Carro) objectIn.readObject();
-            }
+            carro[0] = (Carro) objectIn.readObject();
+            carro[1] = (Carro) objectIn.readObject();
         } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    public void closeSocket(){
-        try{
+            System.out.println("Fechou a conexao do cliente");
             socket.close();
-        } catch(Exception e){e.printStackTrace();}
+            throw e;
+        }
     }
     public void sendU(boolean ativado){
         try{
@@ -109,70 +107,16 @@ class Conexao extends Thread{
 }
 
 class JogoBase extends JFrame{
-    /*JPanel painel;
-    Carro carro[] = new Carro[2];
-    Conexao conexao;
-    public JogoBase(){
-        conexao = new Conexao(carro[0], carro[1], this);
-        conexao.start();
-        setTitle("JogoBase");  // Define o título do JFrame
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  // Define o comportamento ao fechar o JFrame
-        setPreferredSize(new Dimension(1000, 600));
-        painel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                g.setColor(Color.LIGHT_GRAY);
-                g.fillRect(0, 0, getWidth(), getHeight());
-                g.setColor(Color.BLACK);
-                g.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
-                g.setColor(Color.LIGHT_GRAY);
-                g.fillRoundRect(120, 100, getWidth() - 240, getHeight() - 200, 200, 200);
-                g.setColor(Color.RED);
-                g.drawRect(carro[0].x, carro[0].y, 100, 50);
-                //g.drawRect(rect[1].x, rect[1].y, rect[1].width, rect[1].height);
-                //g.drawImage(img[2], 250, 250, 50, 50, this);
-                Toolkit.getDefaultToolkit().sync();
-            }
-        };
-        painel.setFocusable(true);
-
-        painel.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if(e.getKeyCode()==KeyEvent.VK_UP){
-                    conexao.sendU(true);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_DOWN){
-                    conexao.sendD(true);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_LEFT){
-                    conexao.sendL(true);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_RIGHT){
-                    conexao.sendR(true);
-                }
-            }
-            
-        }); 
-        getContentPane().add(painel);  // Adiciona o painel ao JFrame
-
-        pack();  // Redimensiona o JFrame para se adequar ao tamanho preferido do painel
-        setLocationRelativeTo(null);  // Centraliza o JFrame na tela
-        setVisible(true); 
-        while(true){
-            conexao.getCar();
-            repaint();
-
-        }
-        
-    }*/
     Image img[] = new Image[3];
     JPanel painel;
     Conexao conexao;
     Carro carro[] = new Carro[2];
     JogoBase() {
+        carro[0] = new Carro(50, 100, 0);
+        carro[1] = new Carro(50, 200, 0);
         conexao = new Conexao(carro[0], carro[1], this);
-        conexao.start();
+        
+        new ClienteReceive(conexao).start();
         try {
             img[0] = ImageIO.read(new File("../sprites/BlueCar.png"));
             img[1] = ImageIO.read(new File("../sprites/BlueCar.png"));
@@ -182,8 +126,7 @@ class JogoBase extends JFrame{
             System.exit(1);
         }
         setPreferredSize(new Dimension(1000, 600));
-        carro[0] = new Carro(100, 50, 0);
-        Rectangle  pista = new Rectangle(120, 100, getWidth() - 240, getHeight() - 200);
+        Rectangle pista = new Rectangle(120, 100, getWidth() - 240, getHeight() - 200);
 
         painel = new JPanel() {
             protected void paintComponent(Graphics g) {
@@ -254,7 +197,7 @@ class JogoBase extends JFrame{
         pack();
         setVisible(true);
         while(true){
-            conexao.getCar();
+            System.out.println(carro[0].x);
             repaint();
         }
     }
@@ -262,8 +205,6 @@ class JogoBase extends JFrame{
 
 class Cliente{
     public static void main(String[] str){
-        
-
         new JogoBase();
     }
 }
