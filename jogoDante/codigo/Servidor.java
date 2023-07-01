@@ -29,45 +29,69 @@ class Carro implements Serializable{
     }
 }
 
+class ServerSend extends Thread{
+    ServerClient carro1, carro2;
+    ServerSend(ServerClient carro1_, ServerClient carro2_){
+        this.carro1 = carro1_;
+        this.carro2 = carro2_;
+    }
+    public void run(){
+        while(true){
+            carro1.sendCarro();
+            carro2.sendCarro();
+        }
+    }
+}
+
 class ServerClient extends Thread{
     ServerSocket ss;
-    Carro carro;
+    public Carro carro;
+    Socket s;
     int carN;
+    ObjectOutputStream dout;
+    DataInputStream din;
     public ServerClient(ServerSocket SS, int carNumber){
+        carro = new Carro(30, 30, 0);
         ss = SS;
         carN = carNumber;
+        try{
+            s = ss.accept();
+            dout = new ObjectOutputStream(s.getOutputStream());
+            din = new DataInputStream(s.getInputStream());
+        }catch(Exception e){e.printStackTrace();}
+        
+    }
+    public Carro getCarro(){
+        return carro;
     }
     public void updateCarro(int newX, int newY, int angulo){
         carro.updateCarro(newX, newY, angulo);
     }
-    public void sendCarro(ObjectOutputStream dout){
+    public void sendCarro(){
         try{
             dout.writeObject(carro);
+            System.out.println(carro.x);
             dout.flush();
-        } catch(Exception e){System.out.println(e);}
+        } catch(IOException e){System.out.println(e);}
         
     }
     public void run() {
-        carro = new Carro(30, 30, 0);
-        Socket s;
         try {
-            s = ss.accept();
+            
     
             System.out.println("Carro pronto");
-            ObjectOutputStream dout = new ObjectOutputStream(s.getOutputStream());
             
-            dout.writeObject(carro);
-            
-            dout.flush();
-            DataInputStream din = new DataInputStream(s.getInputStream());
-            char input, i=0;
+            char input;
+            int i=0;
             while (true) {
                 input = (char) din.read();
                 if((int)input==65535) break;
-                if(i%2==1)
+                /*if(i%2==1)
                     System.out.println(input);
                 else {System.out.print(carN);System.out.print(input);}
-                i++;
+                i++;*/
+                System.out.print(carN);
+                System.out.println(input);
             }
             System.out.println("conexao encerrada");
             
@@ -89,7 +113,7 @@ class Servidor {
             car1.start();
             ServerClient car2 = new ServerClient(ss, 2);
             car2.start();
-
+            new ServerSend(car1, car2).start();
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         } catch (Exception e) {
             e.printStackTrace();
