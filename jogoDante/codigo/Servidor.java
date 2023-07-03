@@ -8,7 +8,10 @@ import javax.swing.*;
 class Constants {
     public static final int carWidth = 50;
     public static final int carHeight = 100;
-    public static final double carV = 1;
+    public static final double carVF = .2;
+    public static final double carVS = .02;
+    public static final int scrHeight = 800;
+    public static final int scrWidth = 1200;
 }
 
 class Clock {
@@ -24,19 +27,20 @@ class Clock {
 class Carro extends Rectangle {
     public double x;
     public double y;
-    public double vel = Constants.carV;
+    public double vel;
     public double angulo;
     public int lap = 0;
-    
-    public Carro(double X, double Y, double ANG){
+    public Carro(double X, double Y, double ANG, double velocidade){
         x = X;
         y = Y;
         angulo = ANG;
+        vel = velocidade;
     }
     public Carro(Carro carro_){
         x = carro_.getX();
         y = carro_.getY();
         angulo = carro_.getAng();
+        vel = carro_.vel;
     }
     public void updateCarro(double X, double Y, double ANG){
         x += X;
@@ -45,8 +49,9 @@ class Carro extends Rectangle {
     }
     public void printCarro(){
         System.out.println("X = "+ x);
-        System.out.println("Y = "+ y);
-        System.out.println("Angulo = "+ angulo);
+        //System.out.println("Y = "+ y);
+        //System.out.println("Angulo = "+ angulo);
+        System.out.println("Volta = " + lap);
     }
     
     public double getX(){
@@ -100,15 +105,19 @@ class ServerClient extends Thread{
     int carN;
     public ObjectOutputStream dout;
     DataInputStream din;
-    
+    Rectangle pista;
+    Rectangle checkpoint;
+    Rectangle chegada;
     public ServerClient(ServerSocket SS, int carNumber){
         if(carNumber==1)
-            carro = new Carro(31, 31, Math.toRadians(-90));
+            carro = new Carro(30, 10, Math.toRadians(-90), Constants.carVF);
         else
-            carro = new Carro(31, 50, Math.toRadians(-90));
+            carro = new Carro(30, 60, Math.toRadians(-90), Constants.carVF);
         ss = SS;
         carN = carNumber;
-        
+        pista = new Rectangle(250, 165, 680, 445);
+        checkpoint = new Rectangle(575, 600, 50, 180);
+        chegada = new Rectangle(575, 0, 50, 180);
         try{
             s = ss.accept();
             dout = new ObjectOutputStream(s.getOutputStream());
@@ -134,7 +143,7 @@ class ServerClient extends Thread{
     }
     
     public void run() {
-        Timer timer = new Timer(10, new ActionListener() {
+        Timer timer = new Timer(1, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 carro.setBounds((int) carro.x, (int) carro.y, Constants.carWidth, Constants.carHeight);
@@ -146,9 +155,25 @@ class ServerClient extends Thread{
                     dx /= magnitude; // Normaliza a componente X
                     dy /= magnitude; // Normaliza a componente Y
                 }
-
                 carro.x += carro.vel * dx;
                 carro.y += carro.vel * dy;
+            
+                if (carro.intersects(pista))
+                    carro.vel = Constants.carVS;
+                else
+                    carro.vel = Constants.carVF;
+                if(carro.lap==0 && carro.intersects(chegada)){
+                    carro.lap++;
+                }
+                if(carro.lap==1 && carro.intersects(checkpoint)){
+                    carro.lap++;
+                }
+                if(carro.lap==2 && carro.intersects(chegada)){
+                    carro.lap++;
+                }
+                if(carro.lap==3 && carro.intersects(chegada)){
+                    carro.lap++;
+                }
             }
         });
         timer.start();
@@ -165,12 +190,6 @@ class ServerClient extends Thread{
                         break;
                     case 'R':
                         carro.angulo += Math.toRadians(5);
-                        break;
-                    case 'S':
-                        carro.vel = 0.2;
-                        break;
-                    case 'Q':
-                        carro.vel = 1;
                         break;
                 }
             }

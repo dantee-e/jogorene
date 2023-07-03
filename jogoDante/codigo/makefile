@@ -4,4 +4,4 @@ server:
 
 cliente:
 		javac -classpath ./classes Cliente.java -d ./classes
-		java -classpath ./classes Cliente
+		java -classpath ./classes Cliente > output.txt
