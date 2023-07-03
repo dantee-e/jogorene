@@ -1,7 +1,17 @@
 import java.net.*;  
 import java.io.*;
-import java.util.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.*;
+import java.awt.image.*;
+import java.awt.geom.*;
+import javax.swing.*;
+import javax.imageio.*;
+
+class Constants {
+    public static final int carWidth = 50;
+    public static final int carHeight = 100;
+}
 
 class Clock {
     static long start = System.nanoTime();
@@ -16,8 +26,9 @@ class Clock {
 class Carro extends Rectangle {
     public int x;
     public int y;
-    public double vel;
+    public double vel = 4;
     public double angulo;
+    public int lap = 0;
     public Carro(int X, int Y, double ANG){
         x = X;
         y = Y;
@@ -75,9 +86,6 @@ class ServerClient extends Thread{
         }
     }
     
-    public void updateCarro(int newX, int newY, int angulo){
-        carro.updateCarro(newX, newY, angulo);
-    }
     public void sendCarro() throws Exception{
         try {
             if (s.isConnected()) {
@@ -93,31 +101,53 @@ class ServerClient extends Thread{
         }
     }
     public void run() {
+
+        Timer timer = new Timer(10, new ActionListener(){
+            @Override
+            public void actionPerformed(ActionEvent e){
+                carro.setBounds((int) carro.x, (int) carro.y, Constants.carWidth, Constants.carHeight);
+                double dx = Math.cos(carro.angulo);
+                double dy = Math.sin(carro.angulo);
+                double magnitude = Math.sqrt(dx * dx + dy * dy); // Calcula a magnitude do vetor de velocidade
+
+                if (magnitude != 0.0) {
+                    dx /= magnitude; // Normaliza a componente X
+                    dy /= magnitude; // Normaliza a componente Y
+                }
+
+                carro.x += carro.vel * dx;
+                carro.y += carro.vel * dy;
+            }
+        });
+        timer.start();
+
         try {
             System.out.println("Carro pronto");
-
             while (true) {
-                try {
-                    char input = (char) din.read();
-                    if ((int) input == 65535) break;
-                    if(input=='L'){
+                char input = (char) din.read();
+                if ((int) input == 65535) break;
+                switch(input){
+                    case 'L':
                         carro.angulo -= Math.toRadians(5);
-                    }
-                    else if(input=='R'){
+                        break;
+                    case 'R':
                         carro.angulo += Math.toRadians(5);
-                    }
-                } catch (EOFException e) {
-                    // Lidar com a exceção EOFException (fim do fluxo)
-                    System.out.println("Fim do fluxo de entrada. Encerrando a execução.");
-                    break;
+                        break;
+                    case 'S':
+                        carro.vel = 0.2;
+                        break;
+                    case 'Q':
+                        carro.vel = 4;
+                        break;
                 }
+                
             }
-
+            
             System.out.println("conexao encerrada");
 
-        } catch (Exception e) {
-            System.out.println("erro no run da ServerClient");
-        }
+            } catch (Exception e) {
+                System.out.println("erro no run da ServerClient");
+            }
     }
 
 }
