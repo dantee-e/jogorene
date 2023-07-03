@@ -47,17 +47,17 @@ class Carro extends Rectangle {
 }
 
 class ServerSend extends Thread{
-    ServerClient carro1, carro2;
-    ServerSend(ServerClient carro1_, ServerClient carro2_){
-        this.carro1 = carro1_;
-        this.carro2 = carro2_;
+    JFrame jf;
+    ServerClient cliente1, cliente2;
+    ServerSend(JFrame jf){
+        this.jf = jf;
         System.out.println("serversend iniciado");
     }
     public void run(){
         while(true){
             try{
-                carro1.sendCarro();
-                carro2.sendCarro();
+                cliente1.sendJFrame(jf);
+                cliente2.sendJFrame(jf);
             } catch(Exception e){
                 System.out.println("Erro na run do serversend");
                 break;
@@ -65,6 +65,8 @@ class ServerSend extends Thread{
         }
     }
 }
+
+
 
 class ServerClient extends Thread{
     ServerSocket ss;
@@ -86,11 +88,11 @@ class ServerClient extends Thread{
         }
     }
     
-    public void sendCarro() throws Exception{
+    public void sendJFrame(JFrame jf) throws Exception{
         try {
             if (s.isConnected()) {
                 dout.reset();
-                dout.writeObject(carro);
+                dout.writeObject(jf);
                 dout.flush();
             } else {
                 System.out.println("fechou conexao servidor");
@@ -101,25 +103,6 @@ class ServerClient extends Thread{
         }
     }
     public void run() {
-
-        Timer timer = new Timer(10, new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
-                carro.setBounds((int) carro.x, (int) carro.y, Constants.carWidth, Constants.carHeight);
-                double dx = Math.cos(carro.angulo);
-                double dy = Math.sin(carro.angulo);
-                double magnitude = Math.sqrt(dx * dx + dy * dy); // Calcula a magnitude do vetor de velocidade
-
-                if (magnitude != 0.0) {
-                    dx /= magnitude; // Normaliza a componente X
-                    dy /= magnitude; // Normaliza a componente Y
-                }
-
-                carro.x += carro.vel * dx;
-                carro.y += carro.vel * dy;
-            }
-        });
-        timer.start();
 
         try {
             System.out.println("Carro pronto");
@@ -152,7 +135,37 @@ class ServerClient extends Thread{
 
 }
 
+
+
 class Servidor {
+
+
+    public static JPanel makeJPanel(Carro carro[]){
+        JPanel painel = new JPanel(){
+            protected void paintComponent(Graphics g){
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setColor(Color.LIGHT_GRAY);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.setColor(Color.BLACK);
+                g2d.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
+                // g2d.setColor(Color.LIGHT_GRAY);
+                g2d.setColor(Color.GREEN);
+                g2d.fillRoundRect(150, 140, 880, 500, 400, 400);
+                g2d.setColor(Color.RED);
+                g2d.drawRect(pista.x, pista.y, pista.width, pista.height);
+                g2d.drawRect(checkpoint.x, checkpoint.y, checkpoint.width, checkpoint.height);
+                g2d.drawRect(chegada.x, chegada.y, chegada.width, chegada.height);
+                //g2d.drawImage(img[2], chegada.x - 50, chegada.y, chegada.width + 100, chegada.height, this);
+                g2d.rotate(carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
+                g2d.drawImage(img[0], (int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight, this);
+                g2d.rotate(-carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
+                Toolkit.getDefaultToolkit().sync();
+            }
+        };
+        return painel;
+    }
+
+
     public static void main(String args[]) {
         ServerSocket ss;
         new Clock();
