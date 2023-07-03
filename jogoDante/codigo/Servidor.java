@@ -3,11 +3,7 @@ import java.io.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.*;
-import java.awt.image.*;
-import java.awt.geom.*;
 import javax.swing.*;
-import javax.imageio.*;
-import java.lang.Double;
 
 class Constants {
     public static final int carWidth = 50;
@@ -25,20 +21,6 @@ class Clock {
     }
 }
 
-class CarroSend implements Serializable{
-    public double x;
-    public double y;
-    public double vel = Constants.carV;
-    public double angulo;
-    public int lap = 0;
-    public CarroSend(double X, double Y, double ANG, double velocidade){
-        x = X;
-        y = Y;
-        angulo = ANG;
-        vel = velocidade;
-    }
-}
-
 class Carro extends Rectangle {
     public double x;
     public double y;
@@ -51,11 +33,10 @@ class Carro extends Rectangle {
         y = Y;
         angulo = ANG;
     }
-    public Carro(CarroSend carro_){
-        x = carro_.x;
-        y = carro_.y;
-        angulo = carro_.angulo;
-        vel = carro_.vel;
+    public Carro(Carro carro_){
+        x = carro_.getX();
+        y = carro_.getY();
+        angulo = carro_.getAng();
     }
     public void updateCarro(double X, double Y, double ANG){
         x += X;
@@ -91,10 +72,18 @@ class ServerSend extends Thread{
     public void run(){
         while(true){
             try{
-                carro1.sendCarro();
+                carro1.sendCarro(carro1.dout);
                 carro1.carro.printCarro();
-                carro2.sendCarro();
+
+                carro2.sendCarro(carro1.dout);
                 carro2.carro.printCarro();
+
+                carro1.sendCarro(carro2.dout);
+                carro1.carro.printCarro();
+                
+                carro2.sendCarro(carro2.dout);
+                carro2.carro.printCarro();
+                
             } catch(Exception e){
                 System.out.println("Erro na run do serversend");
                 e.printStackTrace();
@@ -109,11 +98,14 @@ class ServerClient extends Thread{
     public Carro carro;
     Socket s;
     int carN;
-    ObjectOutputStream dout;
+    public ObjectOutputStream dout;
     DataInputStream din;
     
     public ServerClient(ServerSocket SS, int carNumber){
-        carro = new Carro(31, 31, Math.toRadians(-90));
+        if(carNumber==1)
+            carro = new Carro(31, 31, Math.toRadians(-90));
+        else
+            carro = new Carro(31, 50, Math.toRadians(-90));
         ss = SS;
         carN = carNumber;
         
@@ -126,13 +118,12 @@ class ServerClient extends Thread{
         }
     }
     
-    public void sendCarro() throws Exception{
+    public void sendCarro(ObjectOutputStream dou) throws Exception{
         try {
             if (s.isConnected()) {
-                dout.reset();
-                CarroSend cs = new CarroSend(carro.x, carro.y, carro.y, carro.vel);
-                dout.writeObject(cs);
-                dout.flush();
+                dou.reset();
+                dou.writeObject(carro);
+                dou.flush();
             } else {
                 System.out.println("fechou conexao servidor");
                 s.close();

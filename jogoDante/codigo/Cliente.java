@@ -5,8 +5,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyAdapter;
 import java.io.*;
 import java.awt.event.*;
-import java.awt.image.*;
-import java.awt.geom.*;
 import javax.imageio.*;
 
 
@@ -37,10 +35,10 @@ class Conexao extends Thread {
             e.printStackTrace();
         }
     }
-    public CarroSend getCar() throws Exception {
+    public Carro getCar() throws Exception {
         try {
             
-            CarroSend carro = (CarroSend) objectIn.readObject();
+            Carro carro = (Carro) objectIn.readObject();
             return carro;
         }catch (Exception e) {
             System.out.println("Fechou a conexão do cliente");
@@ -80,6 +78,7 @@ class Conexao extends Thread {
     public void sendVolta() {
         new KeySender('V').start();
     }
+    
 }
 
 class ClienteReceive extends Thread {
@@ -94,12 +93,16 @@ class ClienteReceive extends Thread {
     public void run() {
         while (true) {
             try {
-                CarroSend carro1 = conexao.getCar();
+                Carro carro1 = conexao.getCar();
+                Carro carro2 = conexao.getCar();
+
+                System.out.println("Carro 1:");
                 carro[0] = new Carro(carro1);
                 carro[0].printCarro();
-                CarroSend carro2 = conexao.getCar();
+                System.out.println("Carro 2:");
                 carro[1] = new Carro(carro2);
                 carro[1].printCarro();
+                System.out.println(carro[0].equals(carro[1]));
                 // Atualize a interface gráfica aqui (repaint, etc.)
             } catch (Exception e) {
                 break;
@@ -122,7 +125,7 @@ class JogoBase extends JFrame{
         
         try {
             img[0] = ImageIO.read(new File("../sprites/BlueCar.png"));
-            img[1] = ImageIO.read(new File("../sprites/BlueCar.png"));
+            img[1] = ImageIO.read(new File("../sprites/RedCar.png"));
             img[2] = ImageIO.read(new File("../sprites/FinishLine.png"));
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "A imagem não pode ser carregada!\n" + e, "Erro", JOptionPane.ERROR_MESSAGE);
@@ -149,9 +152,16 @@ class JogoBase extends JFrame{
                 g2d.drawRect(checkpoint.x, checkpoint.y, checkpoint.width, checkpoint.height);
                 g2d.drawRect(chegada.x, chegada.y, chegada.width, chegada.height);
                 //g2d.drawImage(img[2], chegada.x - 50, chegada.y, chegada.width + 100, chegada.height, this);
+                
                 g2d.rotate(carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
                 g2d.drawImage(img[0], (int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight, this);
                 g2d.rotate(-carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
+
+                g2d.rotate(carro[1].angulo, (int)carro[1].x + Constants.carWidth/2, (int)carro[1].y + Constants.carHeight/2);
+                g2d.drawImage(img[1], (int)carro[1].x, (int)carro[1].y, Constants.carWidth, Constants.carHeight, this);
+                g2d.rotate(-carro[1].angulo, (int)carro[1].x + Constants.carWidth/2, (int)carro[1].y + Constants.carHeight/2);
+
+
                 Toolkit.getDefaultToolkit().sync();
             }
         };
