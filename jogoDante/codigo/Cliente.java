@@ -17,7 +17,7 @@ class Constants {
 
 
 
-class Conexao extends Thread{
+class Conexao extends Thread {
     Socket socket;
     DataInputStream in;
     ObjectInputStream objectIn;
@@ -37,56 +37,77 @@ class Conexao extends Thread{
             e.printStackTrace();
         }
     }
-    public Carro getCar() throws Exception{
+    public CarroSend getCar() throws Exception {
         try {
-            Carro carro = (Carro) objectIn.readObject();
+            
+            CarroSend carro = (CarroSend) objectIn.readObject();
             return carro;
-        } catch (Exception e) {
-            System.out.println("Fechou a conexao do cliente");
+        }catch (Exception e) {
+            System.out.println("Fechou a conexão do cliente");
             socket.close();
             throw e;
         }
-    }    
-    public void sendL(){
-        try{
-            writer.write('L');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
     }
-    public void sendR(){
-        try{
-            writer.write('R');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
+    private class KeySender extends Thread {
+        private char command;
+
+        public KeySender(char command) {
+            this.command = command;
+        }
+
+        public void run() {
+            try {
+                writer.write(command);
+                writer.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
-    public void sendSlow(){
-        try{
-            writer.write('S');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
+
+    public void sendL() {
+        new KeySender('L').start();
     }
-    public void sendQuick(){
-        try{
-            writer.write('Q');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
+    public void sendR() {
+        new KeySender('R').start();
     }
-    public void sendVolta(){
-        try{
-            writer.write('V');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
+    public void sendSlow() {
+        new KeySender('S').start();
+    }
+    public void sendQuick() {
+        new KeySender('Q').start();
+    }
+    public void sendVolta() {
+        new KeySender('V').start();
     }
 }
 
 class ClienteReceive extends Thread {
-    ClienteReceive(Carro carro1, Carro carro2, Conexao conexao){
-        try {
-            carro1 = conexao.getCar();
-            carro2 = conexao.getCar();
-        }catch(Exception e){}
+    Carro[] carro;
+    Conexao conexao;
+    
+    ClienteReceive(Carro[] carro, Conexao conexao){
+        this.carro = carro;
+        this.conexao = conexao;
+    }
+
+    public void run() {
+        while (true) {
+            try {
+                CarroSend carro1 = conexao.getCar();
+                carro[0] = new Carro(carro1);
+                carro[0].printCarro();
+                CarroSend carro2 = conexao.getCar();
+                carro[1] = new Carro(carro2);
+                carro[1].printCarro();
+                // Atualize a interface gráfica aqui (repaint, etc.)
+            } catch (Exception e) {
+                break;
+            }
+        }
     }
 }
+
 class JogoBase extends JFrame{
     Image img[] = new Image[3];
     JPanel painel;
@@ -96,7 +117,8 @@ class JogoBase extends JFrame{
         carro[0] = new Carro(50, 100, 0);
         carro[1] = new Carro(50, 200, 0);
         conexao = new Conexao();
-        
+        ClienteReceive clienteReceive = new ClienteReceive(carro, conexao);
+        clienteReceive.start();
         
         try {
             img[0] = ImageIO.read(new File("../sprites/BlueCar.png"));
@@ -142,27 +164,35 @@ class JogoBase extends JFrame{
                     conexao.sendL();
                 } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
                     conexao.sendR();
-                } 
+                }
             }
         });
 
         Timer timer = new Timer(10, new ActionListener() {
+            int quick=1, volta=0;
             @Override
             public void actionPerformed(ActionEvent e) {
                 carro[0].setBounds((int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight);
                 //logica da velocidade em relacao a pista
-                if (carro[0].intersects(pista)) {
+                if (carro[0].intersects(pista) && quick==1) {
                     conexao.sendSlow();
+                    quick=0;
                 }
-                else {
+                else if(!carro[0].intersects(pista) && quick==0){
                     conexao.sendQuick();
+                    quick=1;
                 }
                 //logica das voltas
-                if (carro[0].lap == 0 && carro[0].intersects(checkpoint))
+                if (carro[0].lap == 0 && carro[0].intersects(checkpoint) && volta==0){
                     conexao.sendVolta();
-                System.out.println(carro[0].lap);
-                if (carro[0].lap == 1 && carro[0].intersects(chegada)) {
+                    volta=1;
+                }
+                else {
+                    volta=0;
+                }
+                if (carro[0].lap == 1 && carro[0].intersects(chegada) && volta==0) {
                     conexao.sendVolta();
+                    volta=1;
                 }
                 if (carro[0].lap == 2 && carro[0].intersects(checkpoint))
                     conexao.sendVolta();
@@ -184,10 +214,6 @@ class JogoBase extends JFrame{
                 } else if (carro[0].y + Constants.carHeight > getHeight()) {
                     carro[0].y = getHeight() - Constants.carHeight; // Limite inferior da janela
                 }
-
-            
-                
-                repaint();
             }
         });
         timer.start();
@@ -196,10 +222,6 @@ class JogoBase extends JFrame{
         pack();
         setVisible(true);
         while(true){
-            try {
-                carro[0] = conexao.getCar();
-                carro[1] = conexao.getCar();
-            }catch(Exception e){}
             repaint();
         }
     }
