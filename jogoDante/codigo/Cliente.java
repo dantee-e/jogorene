@@ -15,40 +15,17 @@ class Constants {
     public static final int carHeight = 100;
 }
 
-class ClienteReceive extends Thread{
-    Conexao c;
-    ClienteReceive(Conexao c){
-        this.c = c;
-    }
-    public void run(){
-        while(true){
-            try{
-                c.getCar();
-            }catch(Exception e){
-                System.out.println("Erro no client receive");
-                e.printStackTrace();
-                break;
-            }
-            
-        }
-    }
-    
-}
 
-class Conexao{
+
+class Conexao extends Thread{
     Socket socket;
     DataInputStream in;
     ObjectInputStream objectIn;
     OutputStream outputStream;
     OutputStreamWriter writer;
-    Carro carro[] = new Carro[2];
     JogoBase jb;
-    Conexao(Carro carro1, Carro carro2, JogoBase j){
-        carro[0] = carro1;
-        carro[1] = carro2;
-        jb = j;
+    Conexao(){
         try {
-            
             socket = new Socket("localhost", 8080);
             in = new DataInputStream(socket.getInputStream());
             objectIn = new ObjectInputStream(in);
@@ -61,16 +38,17 @@ class Conexao{
         }
     }
 
-    public void getCar() throws Exception{
+    public Carro getCar() throws Exception{
         try {
-            carro[0] = (Carro) objectIn.readObject();
-            carro[1] = (Carro) objectIn.readObject();
+            Carro carro = (Carro) objectIn.readObject();
+            return carro;
         } catch (Exception e) {
             System.out.println("Fechou a conexao do cliente");
             socket.close();
             throw e;
         }
     }
+
     public void sendU(boolean ativado){
         try{
             writer.write('U');
@@ -106,6 +84,16 @@ class Conexao{
     }
 }
 
+class ClienteReceive extends Thread {
+    ClienteReceive(Carro carro1, Carro carro2, Conexao conexao){
+        try {
+            carro1 = conexao.getCar();
+            carro1.printCarro();
+            carro2 = conexao.getCar();
+            carro2.printCarro();
+        }catch(Exception e){}
+    }
+}
 class JogoBase extends JFrame{
     Image img[] = new Image[3];
     JPanel painel;
@@ -114,9 +102,9 @@ class JogoBase extends JFrame{
     JogoBase() {
         carro[0] = new Carro(50, 100, 0);
         carro[1] = new Carro(50, 200, 0);
-        conexao = new Conexao(carro[0], carro[1], this);
+        conexao = new Conexao();
         
-        new ClienteReceive(conexao).start();
+        
         try {
             img[0] = ImageIO.read(new File("../sprites/BlueCar.png"));
             img[1] = ImageIO.read(new File("../sprites/BlueCar.png"));
@@ -148,56 +136,24 @@ class JogoBase extends JFrame{
 
         painel.setFocusable(true);
         painel.addKeyListener(new KeyAdapter() {
-        @Override
-        public void keyPressed(KeyEvent e) {
-            if (e.getKeyCode() == KeyEvent.VK_LEFT) {
-            carro[0].angulo -= Math.toRadians(5);
-            } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
-            carro[0].angulo += Math.toRadians(5);
-            } 
-        }
-        });
-
-        /*Timer timer = new Timer(10, new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-            *if (carro[0].intersects(pista)) {
-                //carro[0].x -= pista.getX();
-                //carro[0].y -= pista.getY();
-            }*
-            if (carro[0].x < 0) {
-                carro[0].x = 0; // Limite esquerdo da janela
-            } else if (carro[0].x + Constants.carWidth > getWidth()) {
-                carro[0].x = getWidth() - Constants.carWidth; // Limite direito da janela
-            }
-
-            if (carro[0].y < 0) {
-                carro[0].y = 0; // Limite superior da janela
-            } else if (carro[0].y + Constants.carHeight > getHeight()) {
-                carro[0].y = getHeight() - Constants.carHeight; // Limite inferior da janela
-            }
-                //carro[0].velocidade = 3;
-                double dx = Math.cos(carro[0].angulo);
-                double dy = Math.sin(carro[0].angulo);
-                double magnitude = Math.sqrt(dx * dx + dy * dy); // Calcula a magnitude do vetor de velocidade
-
-                if (magnitude != 0.0) {
-                    dx /= magnitude; // Normaliza a componente X
-                    dy /= magnitude; // Normaliza a componente Y
-                }
-                //carro.x += carro.velocidade * dx;
-                //carro.y += carro.velocidade * dy;
-                repaint();
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                    conexao.sendL(true);
+                } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                    conexao.sendR(true);
+                } 
             }
         });
-        timer.start();*/
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         add(painel);
         pack();
         setVisible(true);
         while(true){
-            System.out.println(carro[0].x);
+            try {
+                carro[1] = conexao.getCar();
+            }catch(Exception e){}
             repaint();
         }
     }

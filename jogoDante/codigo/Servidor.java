@@ -1,6 +1,7 @@
 import java.net.*;  
 import java.io.*;
 import java.util.*;
+import java.awt.*;
 
 class Clock {
     static long start = System.nanoTime();
@@ -12,12 +13,12 @@ class Clock {
     }
  }
 
-class Carro implements Serializable{
+class Carro extends Rectangle {
     public int x;
     public int y;
     public double vel;
     public double angulo;
-    public Carro(int X, int Y, float ANG){
+    public Carro(int X, int Y, double ANG){
         x = X;
         y = Y;
         angulo = ANG;
@@ -27,6 +28,11 @@ class Carro implements Serializable{
         y += Y;
         angulo += ANG;
     }
+    public void printCarro(){
+        System.out.println("X = "+ x);
+        System.out.println("Y = "+ y);
+        System.out.println("Angulo = "+ angulo);
+    }
 }
 
 class ServerSend extends Thread{
@@ -34,16 +40,15 @@ class ServerSend extends Thread{
     ServerSend(ServerClient carro1_, ServerClient carro2_){
         this.carro1 = carro1_;
         this.carro2 = carro2_;
+        System.out.println("serversend iniciado");
     }
     public void run(){
         while(true){
             try{
-                carro1.carro.x+=1;
-                carro2.carro.x+=1;
                 carro1.sendCarro();
                 carro2.sendCarro();
             } catch(Exception e){
-                e.printStackTrace();
+                System.out.println("Erro na run do serversend");
                 break;
             }
         }
@@ -58,14 +63,16 @@ class ServerClient extends Thread{
     ObjectOutputStream dout;
     DataInputStream din;
     public ServerClient(ServerSocket SS, int carNumber){
-        carro = new Carro(30, 30, 0);
+        carro = new Carro(31, 31, 2);
         ss = SS;
         carN = carNumber;
         try{
             s = ss.accept();
             dout = new ObjectOutputStream(s.getOutputStream());
             din = new DataInputStream(s.getInputStream());
-        }catch(Exception e){e.printStackTrace();}
+        }catch(Exception e){
+            System.out.println("erro na construtora do ServerClient");
+        }
     }
     
     public void updateCarro(int newX, int newY, int angulo){
@@ -74,9 +81,11 @@ class ServerClient extends Thread{
     public void sendCarro() throws Exception{
         try {
             if (s.isConnected()) {
+                dout.reset();
                 dout.writeObject(carro);
                 dout.flush();
             } else {
+                System.out.println("fechou conexao servidor");
                 s.close();
             }
         } catch (Exception e) {
@@ -91,8 +100,12 @@ class ServerClient extends Thread{
                 try {
                     char input = (char) din.read();
                     if ((int) input == 65535) break;
-                    System.out.print(carN);
-                    System.out.println(input);
+                    if(input=='L'){
+                        carro.angulo -= Math.toRadians(5);
+                    }
+                    else if(input=='R'){
+                        carro.angulo += Math.toRadians(5);
+                    }
                 } catch (EOFException e) {
                     // Lidar com a exceção EOFException (fim do fluxo)
                     System.out.println("Fim do fluxo de entrada. Encerrando a execução.");
@@ -103,7 +116,7 @@ class ServerClient extends Thread{
             System.out.println("conexao encerrada");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("erro no run da ServerClient");
         }
     }
 
@@ -120,10 +133,11 @@ class Servidor {
             car1.start();
             ServerClient car2 = new ServerClient(ss, 2);
             car2.start();
-            new ServerSend(car1, car2).start();
+            ServerSend sS = new ServerSend(car1, car2);
+            sS.start();
             //BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("erro na main do servidor");
         }
     }
 }

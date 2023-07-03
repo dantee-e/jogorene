@@ -1,100 +1,117 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.*;
+import java.awt.geom.*;
 import javax.swing.*;
 import java.io.*;
 import javax.imageio.*;
 
-/* class JogoBase extends JFrame {
+
+
+class JogoBase extends JFrame {
   Image img[] = new Image[3];
-  Rectangle rect[] = new rect[3];
-  Desenho des = new Desenho();
-
-  class Desenho extends JPanel {
-
-    Desenho() {
-      try {
-        setPreferredSize(new Dimension(1000, 600));
-        img[0] = ImageIO.read(new File("RedCar.png"));
-        img[1] = ImageIO.read(new File("BlueCar.png"));
-        img[2] = ImageIO.read(new File("FinishLine.png"));
+  int lap = 0;
+  JPanel painel;
+  JogoBase() {
+    try {
+        img[0] = ImageIO.read(new File("sprites/RedCar.png"));
+        img[1] = ImageIO.read(new File("sprites/BlueCar.png"));
+        img[2] = ImageIO.read(new File("sprites/FinishLine.png"));
       } catch (IOException e) {
         JOptionPane.showMessageDialog(this, "A imagem não pode ser carregada!\n" + e, "Erro", JOptionPane.ERROR_MESSAGE);
         System.exit(1);
       }
-    }
-
-    public void paintComponent(Graphics g) {
-      super.paintComponent(g);
-      g.setColor(Color.LIGHT_GRAY);
-      g.fillRect(0, 0, getWidth(), getHeight());
-      g.setColor(Color.BLACK);
-      g.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
-      g.setColor(Color.LIGHT_GRAY);
-      g.fillRoundRect(120, 100, getWidth() - 240, getHeight() - 200, 200, 200);
-      g.drawImage(img[0], rect[0].x, rect[0].y, 50, 50, this);
-      g.drawImage(img[1], rect[1].x, rect[1].y, 50, 50, this);
-      //g.drawImage(img[2], 250, 250, 50, 50, this);
-      Toolkit.getDefaultToolkit().sync();
-    }
-  }
-
-  JogoBase() {
-    super("Trabalho");
-    setDefaultCloseOperation(EXIT_ON_CLOSE);
-    add(des);
-    pack();
-    setVisible(true);
-  } */
-class JogoBase extends JFrame {
-  JPanel painel;
-  Rectangle[] rect = new Rectangle[3];
-  int velocidade;
-  double angulo;
-  public JogoBase() {
-    setPreferredSize(new Dimension(1000, 600));
-
+    setPreferredSize(new Dimension(1200, 800));
+    Carro carro  = new Carro(650, 50, 70, 40);
+    Rectangle pista = new Rectangle(250, 165, 680, 445);
+    Rectangle checkpoint = new Rectangle(575, 600, 50, 180);
+    Rectangle chegada = new Rectangle(575, 0, 50, 180);
     painel = new JPanel() {
-      @Override
       protected void paintComponent(Graphics g) {
-        g.setColor(Color.LIGHT_GRAY);
-        g.fillRect(0, 0, getWidth(), getHeight());
-        g.setColor(Color.BLACK);
-        g.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
-        g.setColor(Color.LIGHT_GRAY);
-        g.fillRoundRect(120, 100, getWidth() - 240, getHeight() - 200, 200, 200);
-        g.setColor(Color.RED);
-        g.drawRect(rect[0].x, rect[0].y, rect[0].width, rect[0].height);
-        //g.drawRect(rect[1].x, rect[1].y, rect[1].width, rect[1].height);
-        //g.drawImage(img[2], 250, 250, 50, 50, this);
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setColor(Color.LIGHT_GRAY);
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+        g2d.setColor(Color.BLACK);
+        g2d.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
+        // g2d.setColor(Color.LIGHT_GRAY);
+        g2d.setColor(Color.GREEN);
+        g2d.fillRoundRect(150, 140, 880, 500, 400, 400);
+        g2d.setColor(Color.RED);
+        g2d.drawRect(pista.x, pista.y, pista.width, pista.height);
+        g2d.drawRect(checkpoint.x, checkpoint.y, checkpoint.width, checkpoint.height);
+        g2d.drawRect(chegada.x, chegada.y, chegada.width, chegada.height);
+        //g2d.drawImage(img[2], chegada.x - 50, chegada.y, chegada.width + 100, chegada.height, this);
+        g2d.rotate(carro.theta, (int)carro.x + carro.width/2, (int)carro.y + carro.height/2);
+        g2d.drawImage(img[0], (int)carro.x, (int)carro.y, carro.width, carro.height, this);
+        g2d.rotate(-carro.theta, (int)carro.x + carro.width/2, (int)carro.y + carro.height/2);
         Toolkit.getDefaultToolkit().sync();
       }
     };
 
-    velocidade = 2;
-    angulo = 0;
-    rect[0] = new Rectangle(50, 0, 100, 50);
-    rect[1] = new Rectangle(600, 0, 100, 50);
     painel.setFocusable(true);
     painel.addKeyListener(new KeyAdapter() {
       @Override
       public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_LEFT) {
-          System.out.println("left"); // Gira para a esquerda
+          carro.theta -= Math.toRadians(5);
         } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
-          System.out.println("right"); // Gira para a direita
-        }
+          carro.theta += Math.toRadians(5);
+        } 
       }
     });
 
     Timer timer = new Timer(10, new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
-            // Atualiza a posição do retângulo com base no ângulo
-            rect[0].x += (int) (Math.cos(angulo) * velocidade);
-            rect[0].y += (int) (Math.sin(angulo) * velocidade);
+        carro.setBounds((int)carro.x, (int)carro.y, carro.width, carro.height);
+          //logica da velocidade em relacao a pista
+          if (carro.intersects(pista)) {
+            carro.velocidade = 0.2;
+          }
+          else {
+            carro.velocidade = 4;
+          }
+          //logica das voltas
+          if (lap == 0 && carro.intersects(checkpoint))
+            lap = 1;
+          System.out.println(lap);
+          if (lap == 1 && carro.intersects(chegada)) {
+              lap = 2;
+          }
+          if (lap == 2 && carro.intersects(checkpoint))
+            lap = 3;
+          if (lap == 3 && carro.intersects(chegada)) {
+            JOptionPane.showMessageDialog(painel, "Jogo encerrado");
+            System.exit(0);
+          }
 
-            painel.repaint();
+          //logica de impedir que o carro saia da janela
+          if (carro.x < 0) {
+              carro.x = 0; // Limite esquerdo da janela
+          } else if (carro.x + carro.width > getWidth()) {
+              carro.x = getWidth() - carro.width; // Limite direito da janela
+          }
+
+          if (carro.y < 0) {
+              carro.y = 0; // Limite superior da janela
+          } else if (carro.y + carro.height > getHeight()) {
+              carro.y = getHeight() - carro.height; // Limite inferior da janela
+          }
+
+          //logica da rotacao do carro
+            double dx = Math.cos(carro.theta);
+            double dy = Math.sin(carro.theta);
+            double magnitude = Math.sqrt(dx * dx + dy * dy); // Calcula a magnitude do vetor de velocidade
+
+            if (magnitude != 0.0) {
+                dx /= magnitude; // Normaliza a componente X
+                dy /= magnitude; // Normaliza a componente Y
+            }
+
+            carro.x += carro.velocidade * dx;
+            carro.y += carro.velocidade * dy;
+
+            repaint();
         }
     });
     timer.start();
@@ -102,9 +119,9 @@ class JogoBase extends JFrame {
     setDefaultCloseOperation(EXIT_ON_CLOSE);
     add(painel);
     pack();
+    setResizable(false);
     setVisible(true);
   }
-
   public static void main(String[] args) {
     SwingUtilities.invokeLater(new Runnable() {
             @Override
@@ -112,5 +129,5 @@ class JogoBase extends JFrame {
                 new JogoBase();
             }
         });
-    }
+  }
 }

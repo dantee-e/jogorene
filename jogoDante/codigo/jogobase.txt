@@ -1,0 +1,184 @@
+class JogoBase extends JFrame{
+    /*Image img[] = new Image[3];
+    JPanel painel;
+    Conexao conexao;
+    Carro carro[] = new Carro[2];
+    JogoBase() {
+        carro[0] = new Carro(50, 100, 0);
+        carro[1] = new Carro(50, 200, 0);
+        conexao = new Conexao();
+        
+        
+        try {
+            img[0] = ImageIO.read(new File("../sprites/BlueCar.png"));
+            img[1] = ImageIO.read(new File("../sprites/BlueCar.png"));
+            img[2] = ImageIO.read(new File("../sprites/FinishLine.png"));
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "A imagem não pode ser carregada!\n" + e, "Erro", JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+        setPreferredSize(new Dimension(1000, 600));
+        Rectangle pista = new Rectangle(120, 100, getWidth() - 240, getHeight() - 200);
+
+        painel = new JPanel() {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setColor(Color.LIGHT_GRAY);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.setColor(Color.BLACK);
+                g2d.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
+                g2d.setColor(Color.LIGHT_GRAY);
+                g2d.fillRect(120, 100, getWidth() - 240, getHeight() - 200);
+                //g2d.fillRoundRect(120, 100, getWidth() - 240, getHeight() - 200, 200, 200);
+                g2d.rotate(carro[0]..angulo, (int)carro[0]..x + Constants.carWidth/2, (int)carro[0]..y + Constants.carHeight/2);
+                //g2d.fillRect((int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight);
+                g2d.drawImage(img[0], (int)carro[0]..x, (int)carro[0]..y, Constants.carWidth, Constants.carHeight, this);
+                g2d.rotate(-carro[0]..angulo, (int)carro[0]..x + Constants.carWidth/2, (int)carro[0]..y + Constants.carHeight/2);
+                Toolkit.getDefaultToolkit().sync();
+            }
+        };
+
+        painel.setFocusable(true);
+        painel.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                    conexao.sendL(true);
+                } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                    conexao.sendR(true);
+                } 
+            }
+        });
+
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        add(painel);
+        pack();
+        setVisible(true);
+        while(true){
+            try {
+                carro[1] = conexao.getCar();
+            }catch(Exception e){}
+            repaint();
+        }
+    }*/
+    Conexao conexao;
+    Carro carro[] = new Carro[2];
+    Image img[] = new Image[3];
+    int lap = 0;
+    JPanel painel;
+    JogoBase() {
+        try {
+            img[0] = ImageIO.read(new File("../sprites/RedCar.png"));
+            img[1] = ImageIO.read(new File("../sprites/BlueCar.png"));
+            img[2] = ImageIO.read(new File("../sprites/FinishLine.png"));
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "A imagem não pode ser carregada!\n" + e, "Erro", JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+        
+        setPreferredSize(new Dimension(1200, 800));
+        carro[0] = new Carro(50, 100, Math.toRadians(-90));
+        conexao = new Conexao();
+        Rectangle pista = new Rectangle(250, 165, 680, 445);
+        Rectangle checkpoint = new Rectangle(575, 600, 50, 180);
+        Rectangle chegada = new Rectangle(575, 0, 50, 180);
+        painel = new JPanel() {
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setColor(Color.LIGHT_GRAY);
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+            g2d.setColor(Color.BLACK);
+            g2d.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
+            // g2d.setColor(Color.LIGHT_GRAY);
+            g2d.setColor(Color.GREEN);
+            g2d.fillRoundRect(150, 140, 880, 500, 400, 400);
+            g2d.setColor(Color.RED);
+            g2d.drawRect(pista.x, pista.y, pista.width, pista.height);
+            g2d.drawRect(checkpoint.x, checkpoint.y, checkpoint.width, checkpoint.height);
+            g2d.drawRect(chegada.x, chegada.y, chegada.width, chegada.height);
+            //g2d.drawImage(img[2], chegada.x - 50, chegada.y, chegada.width + 100, chegada.height, this);
+            g2d.rotate(carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
+            g2d.drawImage(img[0], (int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight, this);
+            g2d.rotate(-carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
+            Toolkit.getDefaultToolkit().sync();
+        }
+        };
+
+        painel.setFocusable(true);
+        painel.addKeyListener(new KeyAdapter() {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                carro[0].angulo -= Math.toRadians(5);
+                conexao.sendL(true);
+
+            } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                carro[0].angulo += Math.toRadians(5);
+                conexao.sendR(true);
+            } 
+        }
+        });
+
+        Timer timer = new Timer(10, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            carro[0].setBounds((int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight);
+            //logica da velocidade em relacao a pista
+            if (carro[0].intersects(pista)) {
+                carro[0].vel = 0.2;
+            }
+            else {
+                carro[0].vel = 4;
+            }
+            //logica das voltas
+            if (lap == 0 && carro[0].intersects(checkpoint))
+                lap = 1;
+            System.out.println(lap);
+            if (lap == 1 && carro[0].intersects(chegada)) {
+                lap = 2;
+            }
+            if (lap == 2 && carro[0].intersects(checkpoint))
+                lap = 3;
+            if (lap == 3 && carro[0].intersects(chegada)) {
+                JOptionPane.showMessageDialog(painel, "Jogo encerrado");
+                System.exit(0);
+            }
+
+            //logica de impedir que o carro saia da janela
+            if (carro[0].x < 0) {
+                carro[0].x = 0; // Limite esquerdo da janela
+            } else if (carro[0].x + Constants.carWidth > getWidth()) {
+                carro[0].x = getWidth() - Constants.carWidth; // Limite direito da janela
+            }
+
+            if (carro[0].y < 0) {
+                carro[0].y = 0; // Limite superior da janela
+            } else if (carro[0].y + Constants.carHeight > getHeight()) {
+                carro[0].y = getHeight() - Constants.carHeight; // Limite inferior da janela
+            }
+
+            //logica da rotacao do carro
+                double dx = Math.cos(carro[0].angulo);
+                double dy = Math.sin(carro[0].angulo);
+                double magnitude = Math.sqrt(dx * dx + dy * dy); // Calcula a magnitude do vetor de velocidade
+
+                if (magnitude != 0.0) {
+                    dx /= magnitude; // Normaliza a componente X
+                    dy /= magnitude; // Normaliza a componente Y
+                }
+
+                carro[0].x += carro[0].vel * dx;
+                carro[0].y += carro[0].vel * dy;
+
+                repaint();
+            }
+        });
+        timer.start();
+
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        add(painel);
+        pack();
+        setResizable(false);
+        setVisible(true);
+    }
+}
