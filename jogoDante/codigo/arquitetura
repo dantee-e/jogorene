@@ -1,8 +1,0 @@
-Servidor:
-    class cliente define cada conexao
-    cada cliente tem um carro
-    cada classe cliente precisa poder retornar a coordenada e o angulo de seu carro
-    a classe cliente calcula a nova posicao do carro, atualiza no carro, e envia para o cliente o objeto carro
-
-Cliente:
-    recebe as coordenadas e o angulo do carro e atualiza a pagina com as coordenadas definidas

@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyAdapter;
 import java.io.*;
-import java.awt.event.*;
 import javax.imageio.*;
 
 
@@ -114,41 +113,50 @@ class ClienteReceive extends Thread {
     }
 }
 
+class GameLoop extends Thread{
+    JogoBase jb;
+    GameLoop(JogoBase jb){
+        this.jb = jb;
+        System.out.println("gameloop iniciado");
+    }
+        
+    public void run() {
+        while (true) {
+            if (jb.carro[0].lap == 5) {
+                JOptionPane.showMessageDialog(jb.painel, "Azul ganhou");
+                jb.conexao.sendVolta();
+                System.exit(0);
+            }
+            else if(jb.carro[1].lap == 5){
+                JOptionPane.showMessageDialog(jb.painel, "Vermelho ganhou");
+                jb.conexao.sendVolta();
+                System.exit(0);
+            }
+            jb.repaint();
+
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+}
+
 class JogoBase extends JFrame{
     Image img[] = new Image[3];
     JPanel painel;
     Conexao conexao;
     Carro carro[] = new Carro[2];
 
-    private void gameLoop() {
-        Timer timer = new Timer(10, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                System.out.print(carro[0].lap + "   ");
-                System.out.println(carro[1].lap);
-                if (carro[0].lap == 4 || carro[1].lap == 4) {
-                    JOptionPane.showMessageDialog(painel, "Jogo encerrado");
-                    conexao.sendVolta();
-                    System.exit(0);
-                }
-                if (carro[0].x > Constants.scrWidth || carro[1].x > Constants.scrWidth) {
-                    System.out.println("Carro escapou");
-                }
-                repaint();
-            }
-        });
-
-        timer.start();
-    }
-
     JogoBase() {
-        
         carro[0] = new Carro(30, 10, Math.toRadians(-90), Constants.carVF);
-        new Carro(30, 60, Math.toRadians(-90), Constants.carVF);
+        carro[1] = new Carro(30, 60, Math.toRadians(-90), Constants.carVF);
         conexao = new Conexao();
         ClienteReceive clienteReceive = new ClienteReceive(carro, conexao);
         clienteReceive.start();
-        
+        new GameLoop(this).start();
         try {
             img[0] = ImageIO.read(new File("../sprites/BlueCar.png"));
             img[1] = ImageIO.read(new File("../sprites/RedCar.png"));
@@ -176,10 +184,14 @@ class JogoBase extends JFrame{
                     g2d.fillRoundRect(150, 140, 880, 500, 400, 400);
                     g2d.setColor(Color.RED);
                     g2d.drawRect(pista.x, pista.y, pista.width, pista.height);
-                    g2d.drawRect(checkpoint.x, checkpoint.y, checkpoint.width, checkpoint.height);
-                    g2d.drawRect(chegada.x, chegada.y, chegada.width, chegada.height);
-                    //g2d.drawImage(img[2], chegada.x - 50, chegada.y, chegada.width + 100, chegada.height, this);
                     
+                    
+
+                    g2d.rotate(Math.toRadians(90), chegada.x + chegada.width / 2, chegada.y + chegada.height / 2);
+                    g2d.drawImage(img[2], chegada.x - 50, chegada.y, chegada.width + 100, chegada.height, this);
+                    g2d.rotate(-Math.toRadians(90), chegada.x + chegada.width / 2, chegada.y + chegada.height / 2);
+
+
                     g2d.rotate(carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
                     g2d.drawImage(img[0], (int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight, this);
                     g2d.rotate(-carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
@@ -215,8 +227,6 @@ class JogoBase extends JFrame{
         add(painel);
         pack();
         setVisible(true);
-        
-        gameLoop();
         
     }
 }

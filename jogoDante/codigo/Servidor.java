@@ -8,8 +8,8 @@ import javax.swing.*;
 class Constants {
     public static final int carWidth = 50;
     public static final int carHeight = 100;
-    public static final double carVF = .2;
-    public static final double carVS = .02;
+    public static final double carVF = .8;
+    public static final double carVS = carVF/10;
     public static final int scrHeight = 800;
     public static final int scrWidth = 1200;
 }
@@ -41,6 +41,7 @@ class Carro extends Rectangle {
         y = carro_.getY();
         angulo = carro_.getAng();
         vel = carro_.vel;
+        lap = carro_.lap;
     }
     public void updateCarro(double X, double Y, double ANG){
         x += X;
@@ -49,8 +50,8 @@ class Carro extends Rectangle {
     }
     public void printCarro(){
         System.out.println("X = "+ x);
-        //System.out.println("Y = "+ y);
-        //System.out.println("Angulo = "+ angulo);
+        System.out.println("Y = "+ y);
+        System.out.println("Angulo = "+ angulo);
         System.out.println("Volta = " + lap);
     }
     
@@ -78,17 +79,13 @@ class ServerSend extends Thread{
         while(true){
             try{
                 carro1.sendCarro(carro1.dout);
-                carro1.carro.printCarro();
 
                 carro2.sendCarro(carro1.dout);
-                carro2.carro.printCarro();
 
                 carro1.sendCarro(carro2.dout);
-                carro1.carro.printCarro();
                 
                 carro2.sendCarro(carro2.dout);
-                carro2.carro.printCarro();
-                
+                Thread.sleep(10);
             } catch(Exception e){
                 System.out.println("Erro na run do serversend");
                 e.printStackTrace();
@@ -109,7 +106,7 @@ class ServerClient extends Thread{
     Rectangle checkpoint;
     Rectangle chegada;
     public ServerClient(ServerSocket SS, int carNumber){
-        if(carNumber==1)
+        if(carN==1)
             carro = new Carro(30, 10, Math.toRadians(-90), Constants.carVF);
         else
             carro = new Carro(30, 60, Math.toRadians(-90), Constants.carVF);
@@ -126,7 +123,12 @@ class ServerClient extends Thread{
             System.out.println("erro na construtora do ServerClient");
         }
     }
-    
+    public void resetCarro(){
+        if(carN==1)
+            carro = new Carro(30, 10, Math.toRadians(-90), Constants.carVF);
+        else
+            carro = new Carro(30, 60, Math.toRadians(-90), Constants.carVF);
+    }
     public void sendCarro(ObjectOutputStream dou) throws Exception{
         try {
             if (s.isConnected()) {
@@ -141,23 +143,24 @@ class ServerClient extends Thread{
             throw e;
         }
     }
-    
+    public boolean isOnline(){
+        return s.isConnected();
+    }
     public void run() {
-        Timer timer = new Timer(1, new ActionListener() {
+        Timer timer = new Timer(5, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 carro.setBounds((int) carro.x, (int) carro.y, Constants.carWidth, Constants.carHeight);
                 double dx = Math.cos(carro.angulo-Math.toRadians(-90));
                 double dy = Math.sin(carro.angulo-Math.toRadians(-90));
                 double magnitude = Math.sqrt(dx * dx + dy * dy); // Calcula a magnitude do vetor de velocidade
-
                 if (magnitude != 0.0) {
                     dx /= magnitude; // Normaliza a componente X
                     dy /= magnitude; // Normaliza a componente Y
                 }
                 carro.x += carro.vel * dx;
                 carro.y += carro.vel * dy;
-            
+
                 if (carro.intersects(pista))
                     carro.vel = Constants.carVS;
                 else
@@ -171,9 +174,17 @@ class ServerClient extends Thread{
                 if(carro.lap==2 && carro.intersects(chegada)){
                     carro.lap++;
                 }
-                if(carro.lap==3 && carro.intersects(chegada)){
+                if(carro.lap==3 && carro.intersects(checkpoint)){
                     carro.lap++;
                 }
+                if(carro.lap==4 && carro.intersects(chegada)){
+                    carro.lap++;
+                }
+                if(carro.x<0) carro.x=0;
+                if(carro.y<0) carro.y=0;
+                if(carro.x>Constants.scrWidth-Constants.carWidth) carro.x=Constants.scrWidth-Constants.carWidth;
+                if(carro.y>Constants.scrHeight-Constants.carHeight) carro.y=Constants.scrHeight-Constants.carHeight;
+                
             }
         });
         timer.start();
@@ -186,10 +197,10 @@ class ServerClient extends Thread{
                 System.out.println(input);
                 switch(input){
                     case 'L':
-                        carro.angulo -= Math.toRadians(5);
+                        carro.angulo -= Math.toRadians(10);
                         break;
                     case 'R':
-                        carro.angulo += Math.toRadians(5);
+                        carro.angulo += Math.toRadians(10);
                         break;
                 }
             }
@@ -215,6 +226,10 @@ class Servidor {
             car2.start();
             ServerSend sS = new ServerSend(car1, car2);
             sS.start();
+
+            while(!car1.isOnline() && ! car2.isOnline());
+            car1.resetCarro();
+            car2.resetCarro();
             //BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         } catch (Exception e) {
             System.out.println("erro na main do servidor");
