@@ -4,153 +4,236 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyAdapter;
 import java.io.*;
+import javax.imageio.*;
 
 
 
-class Conexao extends Thread{
+
+
+
+class Conexao extends Thread {
     Socket socket;
     DataInputStream in;
     ObjectInputStream objectIn;
     OutputStream outputStream;
     OutputStreamWriter writer;
-
-    public void run() {
+    JogoBase jb;
+    Conexao(){
         try {
-            
             socket = new Socket("localhost", 8080);
             in = new DataInputStream(socket.getInputStream());
             objectIn = new ObjectInputStream(in);
-            Carro carro = (Carro) objectIn.readObject();
 
             outputStream = socket.getOutputStream();
             writer = new OutputStreamWriter(outputStream);
-
-            System.out.println("check");
-            System.out.println("Carro recebido:");
-
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            
+        } catch (IOException e) {
+            System.out.println("Erro na conexao cliente");        }
+    }
+    public Carro getCar() throws Exception {
+        try {
+            
+            Carro carro = (Carro) objectIn.readObject();
+            return carro;
+        }catch (Exception e) {
+            System.out.println("Fechou a conexão do cliente");
+            socket.close();
+            throw e;
         }
     }
-    public void closeSocket(){
-        try{
-            socket.close();
-        } catch(Exception e){e.printStackTrace();}
-    }
-    public void sendU(boolean ativado){
-        try{
-            writer.write('U');
-            writer.flush();
-            if(ativado) writer.write('P');
-            else writer.write('R');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
-    }
-    public void sendD(boolean ativado){
-        try{
-            writer.write('D');
-            if(ativado) writer.write('P');
-            else writer.write('R');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
-    }
-    public void sendL(boolean ativado){
-        try{
-            writer.write('L');
-            if(ativado) writer.write('P');
-            else writer.write('R');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
-    }
-    public void sendR(boolean ativado){
-        try{
-            writer.write('R');
-            if(ativado) writer.write('P');
-            else writer.write('R');
-            writer.flush();
-        } catch(Exception e){System.out.println(e);}
+    private class KeySender extends Thread {
+        private char command;
+
+        public KeySender(char command) {
+            this.command = command;
+        }
+
+        public void run() {
+            try {
+                writer.write(command);
+                writer.flush();
+            } catch (IOException e) {
+                System.out.println("erro no keysender");
+            }
+        }
     }
 
+    public void sendL() {
+        new KeySender('L').start();
+    }
+    public void sendR() {
+        new KeySender('R').start();
+    }
+    public void sendSlow() {
+        new KeySender('S').start();
+    }
+    public void sendQuick() {
+        new KeySender('Q').start();
+    }
+    public void sendVolta() {
+        new KeySender('V').start();
+    }
+    public void sendT() {
+        new KeySender('T').start();
+    }
+    public void sendB() {
+        new KeySender('B').start();
+    }
+    public void sendE() {
+        new KeySender('E').start();
+    }
+    public void sendD() {
+        new KeySender('D').start();
+    }
 }
 
+class ClienteReceive extends Thread {
+    Carro[] carro;
+    Conexao conexao;
+    
+    ClienteReceive(Carro[] carro, Conexao conexao){
+        this.carro = carro;
+        this.conexao = conexao;
+    }
 
+    public void run() {
+        while (true) {
+            try {
+                Carro carro1 = conexao.getCar();
+                Carro carro2 = conexao.getCar();
 
+                carro[0] = new Carro(carro1);
+                carro[1] = new Carro(carro2);
+                
+
+            } catch (Exception e) {
+                break;
+            }
+        }
+    }
+}
+
+class GameLoop extends Thread{
+    JogoBase jb;
+    GameLoop(JogoBase jb){
+        this.jb = jb;
+        System.out.println("gameloop iniciado");
+    }
+        
+    public void run() {
+        while (true) {
+            if (jb.carro[0].lap == 5) {
+                JOptionPane.showMessageDialog(jb.painel, "Azul ganhou");
+                jb.conexao.sendVolta();
+                System.exit(0);
+            }
+            else if(jb.carro[1].lap == 5){
+                JOptionPane.showMessageDialog(jb.painel, "Vermelho ganhou");
+                jb.conexao.sendVolta();
+                System.exit(0);
+            }
+            jb.repaint();
+
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+}
 
 class JogoBase extends JFrame{
+    Image img[] = new Image[3];
     JPanel painel;
+    Conexao conexao;
     Carro carro[] = new Carro[2];
-    
-    public JogoBase(Conexao conexao){
-        carro[0] = new Carro(30, 30, 0);
-        carro[1] = new Carro(30, 30, 0);
-        setTitle("JogoBase");  // Define o título do JFrame
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  // Define o comportamento ao fechar o JFrame
-        setPreferredSize(new Dimension(1000, 600));
+
+    JogoBase() {
+        carro[0] = new Carro(30, 10, Math.toRadians(-90), Constants.carVF);
+        carro[1] = new Carro(30, 60, Math.toRadians(-90), Constants.carVF);
+        conexao = new Conexao();
+        ClienteReceive clienteReceive = new ClienteReceive(carro, conexao);
+        clienteReceive.start();
+        new GameLoop(this).start();
+        try {
+            img[0] = ImageIO.read(new File("../sprites/BlueCar.png"));
+            img[1] = ImageIO.read(new File("../sprites/RedCar.png"));
+            img[2] = ImageIO.read(new File("../sprites/FinishLine.png"));
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "A imagem não pode ser carregada!\n" + e, "Erro", JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+        setPreferredSize(new Dimension(1200, 800));
+        
+        Rectangle pista = new Rectangle(250, 165, 680, 445);
+        Rectangle checkpoint = new Rectangle(575, 600, 50, 180);
+        Rectangle chegada = new Rectangle(575, 0, 50, 180);
+
         painel = new JPanel() {
-            @Override
             protected void paintComponent(Graphics g) {
-                g.setColor(Color.LIGHT_GRAY);
-                g.fillRect(0, 0, getWidth(), getHeight());
-                g.setColor(Color.BLACK);
-                g.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
-                g.setColor(Color.LIGHT_GRAY);
-                g.fillRoundRect(120, 100, getWidth() - 240, getHeight() - 200, 200, 200);
-                g.setColor(Color.RED);
-                g.drawRect(carro[0].x, carro[0].y, 100, 50);
-                //g.drawRect(rect[1].x, rect[1].y, rect[1].width, rect[1].height);
-                //g.drawImage(img[2], 250, 250, 50, 50, this);
-                Toolkit.getDefaultToolkit().sync();
+                try{
+                    Graphics2D g2d = (Graphics2D) g;
+                    g2d.setColor(Color.LIGHT_GRAY);
+                    g2d.fillRect(0, 0, getWidth(), getHeight());
+                    g2d.setColor(Color.BLACK);
+                    g2d.fillRoundRect(10, 10, getWidth() - 20, getHeight() - 20, 100, 100);
+                    // g2d.setColor(Color.LIGHT_GRAY);
+                    g2d.setColor(Color.GREEN);
+                    g2d.fillRoundRect(150, 140, 880, 500, 400, 400);
+                    g2d.setColor(Color.RED);
+                    g2d.drawRect(pista.x, pista.y, pista.width, pista.height);
+                    
+                    
+
+                    g2d.rotate(Math.toRadians(90), chegada.x + chegada.width / 2, chegada.y + chegada.height / 2);
+                    g2d.drawImage(img[2], chegada.x - 50, chegada.y, chegada.width + 100, chegada.height, this);
+                    g2d.rotate(-Math.toRadians(90), chegada.x + chegada.width / 2, chegada.y + chegada.height / 2);
+
+
+                    g2d.rotate(carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
+                    g2d.drawImage(img[0], (int)carro[0].x, (int)carro[0].y, Constants.carWidth, Constants.carHeight, this);
+                    g2d.rotate(-carro[0].angulo, (int)carro[0].x + Constants.carWidth/2, (int)carro[0].y + Constants.carHeight/2);
+
+                    g2d.rotate(carro[1].angulo, (int)carro[1].x + Constants.carWidth/2, (int)carro[1].y + Constants.carHeight/2);
+                    g2d.drawImage(img[1], (int)carro[1].x, (int)carro[1].y, Constants.carWidth, Constants.carHeight, this);
+                    g2d.rotate(-carro[1].angulo, (int)carro[1].x + Constants.carWidth/2, (int)carro[1].y + Constants.carHeight/2);
+
+
+                    Toolkit.getDefaultToolkit().sync();
+                }catch(Exception e){
+                    System.out.println("fodase");
+                }
+                
             }
         };
-        painel.setFocusable(true);
 
+        painel.setFocusable(true);
         painel.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                
-                if(e.getKeyCode()==KeyEvent.VK_UP){
-                    conexao.sendU(true);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_DOWN){
-                    conexao.sendD(true);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_LEFT){
-                    conexao.sendL(true);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_RIGHT){
-                    conexao.sendR(true);
+                if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                    conexao.sendL();
+                } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                    conexao.sendR();
                 }
             }
-            public void keyReleased(KeyEvent e) {
-                
-                if(e.getKeyCode()==KeyEvent.VK_UP){
-                    conexao.sendU(false);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_DOWN){
-                    conexao.sendD(false);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_LEFT){
-                    conexao.sendL(false);
-                }
-                else if(e.getKeyCode()==KeyEvent.VK_RIGHT){
-                    conexao.sendR(false);
-                }
-            }
-        }); 
-        getContentPane().add(painel);  // Adiciona o painel ao JFrame
+        });
 
-        pack();  // Redimensiona o JFrame para se adequar ao tamanho preferido do painel
-        setLocationRelativeTo(null);  // Centraliza o JFrame na tela
-        setVisible(true); 
+        
+        
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        add(painel);
+        pack();
+        setVisible(true);
+        
     }
 }
 
 class Cliente{
     public static void main(String[] str){
-        Conexao conexao = new Conexao();
-        conexao.start();
-
-        new JogoBase(conexao);
+        new JogoBase();
     }
 }
 
